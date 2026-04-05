@@ -1,6 +1,6 @@
 ---
 name: aikit
-description: Universal package manager for AI agent extensions. Use when initializing projects with aikit init, installing or managing packages with aikit install/list/update/remove, creating and publishing packages with aikit package init/build/publish, or checking agent availability with aikit check.
+description: Universal package manager for AI agent extensions. Use when initializing projects with aikit init, installing or managing packages with aikit install/list/update/remove, creating and publishing packages with aikit package init/build/publish, running coding agents with aikit run, or checking agent availability with aikit check.
 license: Apache-2.0
 ---
 
@@ -14,6 +14,7 @@ AIKIT is a universal package manager for AI agent extensions. Create, share, and
 - Installing, listing, updating, or removing packages.
 - Creating a new package (aikit.toml, templates).
 - Building and publishing packages to GitHub.
+- Running coding agents directly from the CLI (with optional streaming or machine-readable NDJSON output).
 - Checking git, VS Code, and AI agent CLI availability.
 
 ## Installation
@@ -42,6 +43,7 @@ Verify: `aikit version`
 | `aikit list` | Show installed packages (optional: `--author`, `--detailed`) |
 | `aikit update <pkg>` | Update a package to latest (optional: `--breaking`) |
 | `aikit remove <pkg>` | Uninstall a package (optional: `--force`) |
+| `aikit run` | Run a coding agent with a prompt (`-a/--agent`, `-m/--model`, `-p/--prompt`, `--yolo`, `--stream`, `--events`) |
 | `aikit check` | Check git, VS Code, and AI agent CLIs availability |
 | `aikit version` | Show version |
 | `aikit package init <name>` | Create a new package with aikit.toml |
@@ -95,6 +97,52 @@ Example `.env`:
 ```bash
 GITHUB_TOKEN=your_github_token_here
 ```
+
+## Run coding agents
+
+The `aikit run` command executes AI coding agents directly. Runnable agents: `codex`, `claude`, `gemini`, `opencode`, `agent`.
+
+```bash
+# Run with inline prompt
+aikit run --agent claude -p "Refactor this function"
+
+# Read prompt from stdin
+echo "Add tests" | aikit run --agent opencode
+
+# Use environment variable defaults
+export CODING_AGENT=claude
+export CODING_AGENT_MODEL=claude-3-opus
+echo "Summarize changes" | aikit run
+
+# Emit NDJSON events to stdout (one JSON object per line)
+aikit run --agent claude --events -p "Summarize the project"
+
+# Combine --events and --stream for streaming-aware JSON output
+aikit run --agent claude --events --stream -p "Refactor this module"
+```
+
+**NDJSON** (one object per stdout line when using `--events`), for example:
+
+```json
+{"agent_key":"claude","seq":1,"stream":"stdout","payload":{"json_line":{"type":"progress","message":"Starting..."}}}
+{"agent_key":"claude","seq":2,"stream":"stdout","payload":{"raw_line":"Processing file..."}}
+```
+
+**Key options:**
+
+| Flag | Short | Description | Default |
+|------|-------|-------------|---------|
+| `--agent` | `-a` | Agent to run | `CODING_AGENT` env var, then `opencode` |
+| `--model` | `-m` | Model to use | `CODING_AGENT_MODEL` env var, then `zai-coding-plan/glm-4.7` |
+| `--prompt` | `-p` | Prompt | Reads from stdin if omitted |
+| `--yolo` | | Auto-confirm, skip checks | `false` |
+| `--stream` | | Agent-native streaming flags | `false` |
+| `--events` | | NDJSON event stream to stdout | `false` |
+| `--debug` | | Verbose diagnostics (global `aikit` flag; see `aikit run --help`) | `false` |
+
+`--stream` and `--events` are independent: `--stream` tunes agent argv; `--events` switches CLI output to NDJSON. Combined use is valid and recommended for tooling integration.
+
+Run `aikit run --help` for the authoritative option reference.
 
 ## Getting help
 

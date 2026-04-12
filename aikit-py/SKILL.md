@@ -1,12 +1,12 @@
 ---
 name: aikit-py
-description: Python bindings for aikit SDK, enabling programmatic interaction with aikit agents, listing agents, and deploying commands, skills, and subagents from Python code.
+description: Python gateway to aikit-sdk — catalog, deploy, agent detection, run_agent (buffered), run_agent_events_py (per-event callbacks, same schema as aikit run --events). Use with pip/poetry/uv.
 license: Apache-2.0
 ---
 
 # aikit-py Skill
 
-This skill provides guidance on how to use the `aikit-py` Python bindings to interact with the aikit SDK programmatically.
+`aikit-py` exposes the same **programmatic gateway** as **aikit-sdk** from Python: catalog and paths, deploy commands/skills/subagents, probe installed runnable CLIs, **`run_agent`** for buffered stdout/stderr, and **`run_agent_events_py`** for incremental events (payload keys match `aikit run --events` NDJSON, including `token_usage_line` when emitted).
 
 ## When to use
 
@@ -14,9 +14,9 @@ Use `aikit-py` when you want to drive aikit from Python scripts, tools, or autom
 - Installing `aikit-py` via `pip`, `poetry`, or `uv`.
 - Listing or resolving agent configurations.
 - Programmatically deploying commands, skills, or subagents.
-- Running coding agents and capturing buffered output.
+- Running coding agents: **`run_agent`** (wait for completion) or **`run_agent_events_py(..., on_event, ...)`** (callback per event; pass `stream=True` to align agent argv with CLI `--stream`).
 
-**Streaming limitation:** `aikit-py` does not support streaming events. The `run_agent` function buffers all output until the agent completes. For real-time NDJSON event delivery, use `aikit run --events` as a subprocess; add `--stream` when you need both NDJSON and agent-native streaming argv. See the [aikit skill](../aikit/SKILL.md) for CLI examples and sample NDJSON lines.
+For subprocess-only workflows you can still shell out to `aikit run --events`. See the [aikit skill](../aikit/SKILL.md) for CLI flags and the [aikit-py README](https://github.com/goaikit/aikit/blob/main/aikit-py/README.md) for API details.
 
 Run `aikit run --help` for the full CLI option list.
 

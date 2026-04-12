@@ -2,7 +2,7 @@
 id = "aikit"
 version = "1.0.0"
 name = "aikit"
-description = "Universal package manager for AI agent extensions. Use when initializing projects with aikit init, installing or managing packages with aikit install/list/update/remove, creating and publishing packages with aikit package init/build/publish, or checking agent availability with aikit check."
+description = "Multi-agent template package manager and CLI: aikit init, install/list/update/remove, package init/build/publish, aikit run, check. Use aikit-sdk / aikit-py for programmatic gateway (catalog, deploy, run, events)."
 author = "goaikit"
 tags = ["tools", "package-manager", "aikit", "cli", "agent-extensions", "cursor", "claude"]
 capabilities = ["init-install-list-update-remove", "package-init-build-publish", "check", "aikit-toml", "cli-commands"]

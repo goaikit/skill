@@ -1,12 +1,12 @@
 ---
 name: aikit
-description: Universal package manager for AI agent extensions. Use when initializing projects with aikit init, installing or managing packages with aikit install/list/update/remove, creating and publishing packages with aikit package init/build/publish, running coding agents with aikit run, or checking agent availability with aikit check.
+description: Multi-agent template package manager and CLI (aikit init, install/list/update/remove, package init/build/publish, release, aikit run, check). For Rust/Python integrations use aikit-sdk and aikit-py as the programmatic gateway to the same catalog, deploy, detection, and run/event APIs.
 license: Apache-2.0
 ---
 
 # AIKIT
 
-AIKIT is a universal package manager for AI agent extensions. Create, share, and install reusable commands and templates across 17+ AI assistants (Claude, Cursor, GitHub Copilot, Gemini, etc.). Use this skill when working with aikit from the CLI or creating/publishing packages.
+**Multi-agent template package manager and CLI:** install and publish `aikit.toml` packages from GitHub or a local directory, map templates into many assistant layouts, scaffold with `aikit init`, run supported agent CLIs with `aikit run`. The catalog covers **18** assistants; `aikit run` supports `codex`, `claude`, `gemini`, `opencode`, `agent`. **aikit-sdk** (Rust) and **aikit-py** (Python) mirror the same gateway for automation (deploy, probe CLIs, buffered run, event stream / NDJSON shape).
 
 ## When to use
 
@@ -60,7 +60,7 @@ aikit init --here --ai cursor
 # Or create a new project for Claude
 aikit init my-project --ai claude
 
-# Install a community package
+# Install a package (GitHub owner/repo or local path)
 aikit install username/package-name
 aikit list
 aikit check
@@ -109,11 +109,6 @@ aikit run --agent claude -p "Refactor this function"
 # Read prompt from stdin
 echo "Add tests" | aikit run --agent opencode
 
-# Use environment variable defaults
-export CODING_AGENT=claude
-export CODING_AGENT_MODEL=claude-3-opus
-echo "Summarize changes" | aikit run
-
 # Emit NDJSON events to stdout (one JSON object per line)
 aikit run --agent claude --events -p "Summarize the project"
 
@@ -121,7 +116,7 @@ aikit run --agent claude --events -p "Summarize the project"
 aikit run --agent claude --events --stream -p "Refactor this module"
 ```
 
-**NDJSON** (one object per stdout line when using `--events`), for example:
+**NDJSON** (one object per stdout line when using `--events`): `payload` is one of `json_line`, `raw_line`, `raw_bytes`, or `token_usage_line` (normalized usage after a line that contained usage). Example:
 
 ```json
 {"agent_key":"claude","seq":1,"stream":"stdout","payload":{"json_line":{"type":"progress","message":"Starting..."}}}
@@ -132,8 +127,8 @@ aikit run --agent claude --events --stream -p "Refactor this module"
 
 | Flag | Short | Description | Default |
 |------|-------|-------------|---------|
-| `--agent` | `-a` | Agent to run | `CODING_AGENT` env var, then `opencode` |
-| `--model` | `-m` | Model to use | `CODING_AGENT_MODEL` env var, then `zai-coding-plan/glm-4.7` |
+| `--agent` | `-a` | Runnable agent key | **Required** |
+| `--model` | `-m` | Model passed to the agent | Optional; if omitted, aikit does not inject a model (agent decides) |
 | `--prompt` | `-p` | Prompt | Reads from stdin if omitted |
 | `--yolo` | | Auto-confirm, skip checks | `false` |
 | `--stream` | | Agent-native streaming flags | `false` |
@@ -141,6 +136,8 @@ aikit run --agent claude --events --stream -p "Refactor this module"
 | `--debug` | | Verbose diagnostics (global `aikit` flag; see `aikit run --help`) | `false` |
 
 `--stream` and `--events` are independent: `--stream` tunes agent argv; `--events` switches CLI output to NDJSON. Combined use is valid and recommended for tooling integration.
+
+`aikit run` does not read `CODING_AGENT` or `CODING_AGENT_MODEL`; always pass `-a` (and `-m` only when you want to override the agent's model).
 
 Run `aikit run --help` for the authoritative option reference.
 

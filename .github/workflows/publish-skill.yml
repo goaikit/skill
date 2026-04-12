@@ -59,6 +59,8 @@ jobs:
       - name: Package skill using FastSkill
         if: steps.detect.outputs.changed == 'true' || steps.detect.outputs.force == 'true'
         run: |
+          # Package aikit skill using fastskill CLI
+          # Skills are in repository root
           fastskill package \
             --skills-dir . \
             --skills aikit \
@@ -77,6 +79,7 @@ jobs:
       - name: Delete old releases
         if: steps.detect.outputs.changed == 'true' || steps.detect.outputs.force == 'true'
         run: |
+          # Delete any releases with incorrect or old tags
           for tag in $(gh release list --json tagName --jq '.[].tagName'); do
             if [ "$tag" = "v" ] || [ "$tag" != "v${{ steps.version.outputs.version }}" ]; then
               echo "Deleting release $tag"
@@ -93,18 +96,25 @@ jobs:
           tag_name: v${{ steps.version.outputs.version }}
           name: AIKIT Skill v${{ steps.version.outputs.version }}
           body: |
-            AIKIT - Universal package manager for AI agent extensions
+            AIKIT - Multi-agent template package manager, CLI, and SDK/Python gateway
+
+            ## What's New
+
+            See [changelog](https://github.com/${{ github.repository }}/blob/main/aikit/SKILL.md) for details.
 
             ## Installation
 
+            Add this skill to your project:
+
             ```bash
+            # Install this skill
             fastskill add https://github.com/${{ github.repository }}.git
             ```
 
             ## Contents
 
-            - SKILL.md: Skill documentation
-            - skill-project.toml: Skill metadata
+            - SKILL.md: Comprehensive skill documentation
+            - skill-project.toml: Skill configuration and metadata
           files: ./artifacts/*.zip
           fail_on_unmatched_files: false
           draft: false

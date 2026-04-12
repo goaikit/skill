@@ -1,0 +1,8 @@
+[metadata]
+id = "aikit-py"
+name = "aikit-py"
+description = "Use aikit-py when automating agent catalog or deploy from Python, listing agents, or deploying commands/skills/subagents from code."
+tags = ["aikit", "python", "bindings", "deploy", "catalog"]
+
+[tool.fastskill]
+skills_directory = "aikit-py"

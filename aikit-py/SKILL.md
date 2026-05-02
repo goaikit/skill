@@ -16,7 +16,7 @@ Use `aikit-py` when you want to drive aikit from Python scripts, tools, or autom
 - Programmatically deploying commands, skills, or subagents.
 - Running coding agents: **`run_agent`** (wait for completion) or **`run_agent_events_py(..., on_event, ...)`** (callback per event; pass `stream=True` to align agent argv with CLI `--stream`).
 
-For subprocess-only workflows you can still shell out to `aikit run --events`. See the [aikit skill](../aikit/SKILL.md) for CLI flags and the [aikit-py README](https://github.com/goaikit/aikit/blob/main/aikit-py/README.md) for API details.
+For subprocess-only workflows you can still shell out to `aikit run --events`. See the [aikit skill](../aikit/SKILL.md) for CLI flags (including **long prompts via stdin** to avoid Linux `ARG_MAX` when you omit `-p`) and the [aikit-py README](https://github.com/goaikit/aikit/blob/main/aikit-py/README.md) for API details.
 
 Run `aikit run --help` for the full CLI option list.
 

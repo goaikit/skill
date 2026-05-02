@@ -1,6 +1,6 @@
 ---
 name: aikit
-description: Multi-agent template package manager and CLI (aikit init, install/list/update/remove, package init/build/publish, release, aikit run, check). For Rust/Python integrations use aikit-sdk and aikit-py as the programmatic gateway to the same catalog, deploy, detection, and run/event APIs.
+description: Multi-agent template package manager and CLI (aikit init, install/list/update/remove, package init/build/publish, release, aikit run, check). For Rust/Python integrations use aikit-sdk and aikit-py as the programmatic gateway to the same catalog, deploy, detection, and run/event APIs. Large CLI prompts should use stdin (omit -p) to avoid Linux ARG_MAX.
 license: Apache-2.0
 ---
 
@@ -115,6 +115,27 @@ aikit run --agent claude --events -p "Summarize the project"
 # Combine --events and --stream for streaming-aware JSON output
 aikit run --agent claude --events --stream -p "Refactor this module"
 ```
+
+### Long prompts (avoid `Argument list too long`)
+
+On Linux, the kernel limits the **total size of the process argument list and environment** (`getconf ARG_MAX`, often on the order of 128 KiB to 2 MiB). A very large string passed as a **single** shell argument to `aikit` (for example one huge `aikit run ... "…"` or `aikit run ... -p "$(cat big.txt)"`) can exceed that limit; the shell then fails before `aikit` starts, often with: `Argument list too long`.
+
+**Do this for long prompts:** omit `-p` and pass the prompt on **stdin** (aikit reads the full prompt from stdin when `--prompt` is not set). The bytes are streamed; they are not one `argv` string.
+
+```bash
+# File redirect
+aikit run -a claude < prompt.txt
+
+# Pipe
+cat build.log | aikit run -a aikit
+
+# Here-doc (no word-splitting of the body)
+aikit run -a claude <<'EOF'
+Paste or generate arbitrarily long text here.
+EOF
+```
+
+**Avoid** for large content: inline quotes with megabytes of text, and **`-p "$(cat huge.txt)"`** (the shell still expands to one massive `-p` argument and can hit the same limit).
 
 **NDJSON** (one object per stdout line when using `--events`): `payload` is one of `json_line`, `raw_line`, `raw_bytes`, or `token_usage_line` (normalized usage after a line that contained usage). Example:
 

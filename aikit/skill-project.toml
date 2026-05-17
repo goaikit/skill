@@ -2,7 +2,7 @@
 id = "aikit"
 version = "1.0.0"
 name = "aikit"
-description = "Multi-agent template package manager and CLI: aikit init, install/list/update/remove, package init/build/publish, aikit run, check. Use aikit-sdk / aikit-py for programmatic gateway (catalog, deploy, run, events)."
+description = "Multi-agent template package manager, CLI, and HTTP gateway: aikit init, install/list/update/remove, package init/build/publish, aikit agent run, aikit serve (multi-turn HTTP API with SSE or JSON via Accept), check. Use aikit-sdk / aikit-py for programmatic gateway (catalog, deploy, run, events)."
 author = "goaikit"
 tags = ["tools", "package-manager", "aikit", "cli", "agent-extensions", "cursor", "claude"]
 capabilities = ["init-install-list-update-remove", "package-init-build-publish", "check", "aikit-toml", "cli-commands"]

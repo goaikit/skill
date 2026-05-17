@@ -1,12 +1,12 @@
 ---
 name: aikit-py
-description: Python gateway to aikit-sdk — catalog, deploy, agent detection, run_agent (buffered), run_agent_events_py (per-event callbacks, same schema as aikit run --events). Use with pip/poetry/uv.
+description: Python gateway to aikit-sdk — catalog, deploy, agent detection, run_agent (buffered), run_agent_events_py (per-event callbacks, same schema as aikit agent run --events). Use with pip/poetry/uv.
 license: Apache-2.0
 ---
 
 # aikit-py Skill
 
-`aikit-py` exposes the same **programmatic gateway** as **aikit-sdk** from Python: catalog and paths, deploy commands/skills/subagents, probe installed runnable CLIs, **`run_agent`** for buffered stdout/stderr, and **`run_agent_events_py`** for incremental events (payload keys match `aikit run --events` NDJSON, including `token_usage_line` when emitted).
+`aikit-py` exposes the same **programmatic gateway** as **aikit-sdk** from Python: catalog and paths, deploy commands/skills/subagents, probe installed runnable CLIs, **`run_agent`** for buffered stdout/stderr, and **`run_agent_events_py`** for incremental events (payload keys match `aikit agent run --events` NDJSON, including `token_usage_line` when emitted).
 
 ## When to use
 
@@ -16,9 +16,9 @@ Use `aikit-py` when you want to drive aikit from Python scripts, tools, or autom
 - Programmatically deploying commands, skills, or subagents.
 - Running coding agents: **`run_agent`** (wait for completion) or **`run_agent_events_py(..., on_event, ...)`** (callback per event; pass `stream=True` to align agent argv with CLI `--stream`).
 
-For subprocess-only workflows you can still shell out to `aikit run --events`. See the [aikit skill](../aikit/SKILL.md) for CLI flags (including **long prompts via stdin** to avoid Linux `ARG_MAX` when you omit `-p`) and the [aikit-py README](https://github.com/goaikit/aikit/blob/main/aikit-py/README.md) for API details.
+For subprocess-only workflows you can still shell out to `aikit agent run --events`. See the [aikit skill](../aikit/SKILL.md) for CLI flags (including **long prompts via stdin** to avoid Linux `ARG_MAX` when you omit `-p`) and the [aikit-py README](https://github.com/goaikit/aikit/blob/main/aikit-py/README.md) for API details.
 
-Run `aikit run --help` for the full CLI option list.
+Run `aikit agent run --help` for the full CLI option list.
 
 ## Installation
 

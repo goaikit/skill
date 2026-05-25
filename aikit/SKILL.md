@@ -58,12 +58,13 @@ Verify: `aikit version`
 | `aikit agent check` | Probe runnable agent CLIs only |
 | `aikit agent mcp list` / `add` | Inspect or merge MCP server entries (Cursor, Claude, Gemini, VS Code Copilot, OpenCode, Codex) |
 | `aikit serve` | HTTP server for multi-turn agent sessions (SSE or single-shot JSON via `Accept`) |
-| `aikit llm` | One-shot OpenAI-compatible LLM call |
 | `aikit check` | Check git, VS Code, and AI agent CLIs availability |
 | `aikit package init <name>` | Create a new package with `aikit.toml` |
+| `aikit package validate` | Validate package structure and that templates exist (install-ready) |
 | `aikit package build` | Build distributable package (`dist/` or `.genreleases/`) |
 | `aikit package publish <owner/repo>` | Publish package to GitHub (release + assets) |
 | `aikit release <version>` | Create GitHub release from `.genreleases/` (e.g. `v1.0.0`) |
+| `aikit spec` | Export the CLI command surface as JSON, YAML, or Markdown |
 | `aikit version` | Show version |
 
 > **Deprecated aliases:** `aikit run`, `aikit agents`, and the top-level
@@ -190,6 +191,10 @@ emitted by the built-in agent. Example:
 | `--yolo` | | Auto-confirm, skip checks | `false` |
 | `--stream` | | Agent-native streaming flags | `false` |
 | `--events` | | NDJSON event stream to stdout | `false` |
+| `--progress` | | Live human-readable progress on stderr (conflicts with `--events`) | `false` |
+| `--resume` | `-r` | Resume the session with the given session ID | |
+| `--resume-last` | | Resume the most recent session for the current directory | `false` |
+| `--dry-run` | | Validate inputs but don't execute the agent | `false` |
 | `--debug` | | Verbose diagnostics (global `aikit` flag) | `false` |
 
 `--stream` and `--events` are independent: `--stream` tunes agent argv;

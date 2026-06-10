@@ -210,9 +210,9 @@ Run `aikit agent run --help` for the authoritative option reference.
 ## Serve agents over HTTP (`aikit serve`)
 
 `aikit serve` exposes the same agent runtime via a small REST + SSE
-surface. Sessions are created implicitly on the first POST
-`/v1/messages` that omits `session_id`; subsequent calls resume by
-passing the returned id.
+surface. Domain endpoints are versioned under `/api/v1/`. Sessions are
+created implicitly on the first POST `/api/v1/messages` that omits
+`session_id`; subsequent calls resume by passing the returned id.
 
 ```bash
 # Defaults: 127.0.0.1:8787, 300s timeout, 10 concurrent runs
@@ -224,26 +224,53 @@ aikit serve --host 0.0.0.0 --port 8787 \
   --api-key "$(openssl rand -hex 32)"
 ```
 
-**Endpoints:** `GET /health`, `GET /v1/agents`, `POST /v1/messages`,
-`GET /v1/sessions`, `GET /v1/sessions/{id}`, `DELETE /v1/sessions/{id}`.
+**Endpoints:** `GET /healthz` (liveness), `GET /readyz` (readiness),
+`GET /api/v1/agents`, `POST /api/v1/messages`, `GET /api/v1/sessions`,
+`GET /api/v1/sessions/{id}`, `DELETE /api/v1/sessions/{id}`. The health
+endpoints live at the root; `GET /api/` redirects `308` to `/api/v1`.
 
-**Choosing a response shape on `/v1/messages`** — content negotiation
-via `Accept`:
+**SSE frames** on a streaming `POST /api/v1/messages`, in order:
+`event: session` (new id), then `event: tool_use` / `event: tool_result`
+(the agent's live tool activity) interleaved with `event: text` (content
+deltas), and finally `event: done` (`{"exit_code":0}`). Use these to
+watch what the agent is doing within a turn.
+
+**Frame fidelity is agent-dependent.** The full contract above is only
+guaranteed for the built-in `aikit` backend: it emits `session` first,
+`tool_use`/`tool_result` for every tool call, and token-by-token `text`
+deltas. External CLI agents (`claude`, `codex`, `gemini`, `agent`) emit
+only what their CLI surfaces on stdout — typically a single final `text`
+frame, often **no** `tool_use`/`tool_result` (tool calls run silently),
+and `codex`/`gemini` emit **no** `session` frame, so `session_id` comes
+back `null` and the run is not resumable via the session mechanism. Plan
+clients around the lowest common denominator (`text` + `done`) unless you
+pin the `aikit` backend. **Reasoning/thinking and token usage are never
+surfaced through `serve`** (no frame and no field in the sync body); for
+token accounting use `aikit agent run --events` (`token_usage_line`).
+Note also: in SSE mode a non-zero exit may arrive as just
+`done{"exit_code":1}` with no `error` frame — the sync JSON shape is more
+reliable for diagnosing failures (it returns `error.agent_error`).
+
+**Choosing a response shape on `/api/v1/messages`** — content
+negotiation via `Accept`:
 
 ```bash
 # SSE (incremental events; default if Accept is missing or */*)
-curl -sN -X POST http://127.0.0.1:8787/v1/messages \
+curl -sN -X POST http://127.0.0.1:8787/api/v1/messages \
   -H 'Accept: text/event-stream' \
   -H 'Content-Type: application/json' \
   -d '{"agent":"aikit","content":"Say hello."}'
 
 # Single JSON body (runs to completion, returns assistant text + session_id)
-curl -s -X POST http://127.0.0.1:8787/v1/messages \
+curl -s -X POST http://127.0.0.1:8787/api/v1/messages \
   -H 'Accept: application/json' \
   -H 'Content-Type: application/json' \
   -d '{"agent":"aikit","content":"Say hello."}' | jq .
 # → {"session_id":"…","content":"Hello, world!","exit_code":0}
 ```
+
+Request body fields: `agent` (required), `content` (required),
+`session_id`, `model`, `yolo`. Unknown fields are rejected (`422`).
 
 Resume by quoting the returned `session_id` in the next request body.
 Any other explicit `Accept` returns `406 Not Acceptable`.

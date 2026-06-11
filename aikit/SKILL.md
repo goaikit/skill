@@ -228,28 +228,36 @@ aikit serve --host 0.0.0.0 --port 8787 \
 `GET /api/v1/agents`, `POST /api/v1/messages`, `GET /api/v1/sessions`,
 `GET /api/v1/sessions/{id}`, `DELETE /api/v1/sessions/{id}`. The health
 endpoints live at the root; `GET /api/` redirects `308` to `/api/v1`.
+`GET /api/v1/agents` reports each agent's `available` (binary on PATH) and
+`auth` (`ok` / `unauthenticated` / `unknown`) — `available` does **not**
+imply authenticated; the `auth` probe checks credential presence, not
+that a run will succeed.
 
-**SSE frames** on a streaming `POST /api/v1/messages`, in order:
-`event: session` (new id), then `event: tool_use` / `event: tool_result`
-(the agent's live tool activity) interleaved with `event: text` (content
-deltas), and finally `event: done` (`{"exit_code":0}`). Use these to
-watch what the agent is doing within a turn.
+**SSE frames** on a streaming `POST /api/v1/messages`. The first frame is
+`event: session` (the new id); then, as the turn runs, any of:
+`event: text` (assistant content deltas), `event: reasoning` (model
+thinking), `event: tool_use` / `event: tool_result` (live tool activity),
+`event: token_usage` (per-step input/output/cache tokens),
+`event: step_finish`, `event: subagent_spawn` / `event: subagent_result`,
+and `event: context_compressed`. The stream ends with `event: done`
+(`{"exit_code":N}`); on failure an `event: error` (`{"code","message"}`)
+is emitted just before it. Use these to watch what the agent is doing
+within a turn.
 
-**Frame fidelity is agent-dependent.** The full contract above is only
-guaranteed for the built-in `aikit` backend: it emits `session` first,
-`tool_use`/`tool_result` for every tool call, and token-by-token `text`
-deltas. External CLI agents (`claude`, `codex`, `gemini`, `agent`) emit
-only what their CLI surfaces on stdout — typically a single final `text`
-frame, often **no** `tool_use`/`tool_result` (tool calls run silently),
-and `codex`/`gemini` emit **no** `session` frame, so `session_id` comes
-back `null` and the run is not resumable via the session mechanism. Plan
-clients around the lowest common denominator (`text` + `done`) unless you
-pin the `aikit` backend. **Reasoning/thinking and token usage are never
-surfaced through `serve`** (no frame and no field in the sync body); for
-token accounting use `aikit agent run --events` (`token_usage_line`).
-Note also: in SSE mode a non-zero exit may arrive as just
-`done{"exit_code":1}` with no `error` frame — the sync JSON shape is more
-reliable for diagnosing failures (it returns `error.agent_error`).
+**Frame fidelity is agent-dependent.** The built-in `aikit` backend emits
+the richest stream: `session` first, `tool_use`/`tool_result` for every
+tool call, token-by-token `text` deltas, plus `reasoning`, `token_usage`,
+`step_finish`, and sub-agent/compression frames. External CLI agents
+(`claude`, `codex`, `gemini`, `agent`) emit only what their CLI surfaces —
+commonly a single final `text` frame and a `token_usage` frame, often
+without `tool_use`/`tool_result` (tool calls can run silently). A
+`session_id` is returned when the backend exposes one: the built-in
+`aikit` agent always does, and CLI backends do when their output carries a
+session/turn id — but some CLIs (or versions) return `null`, so check the
+response before relying on resume. The sync JSON body mirrors the stream:
+it always carries `content` and `exit_code`, plus an aggregated `usage`
+object when reported, `session_id` when known, and `error` (code
+`agent_error`, or `unauthenticated` for auth failures) on a non-zero exit.
 
 **Choosing a response shape on `/api/v1/messages`** — content
 negotiation via `Accept`:

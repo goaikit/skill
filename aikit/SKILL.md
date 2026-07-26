@@ -12,7 +12,7 @@ templates into many assistant layouts, scaffold with `aikit init`, run
 supported agent CLIs with `aikit agent run`, and expose the same runtime
 over HTTP with `aikit serve`. The catalog covers **18** assistants;
 `aikit agent run` supports `codex`, `claude`, `gemini`, `opencode`,
-`agent`, `aikit`. **aikit-sdk** (Rust) and **aikit-py** (Python) mirror
+`cursor`, `pi`, `aikit`. **aikit-sdk** (Rust) and **aikit-py** (Python) mirror
 the same gateway for automation (deploy, probe CLIs, buffered run, event
 stream / NDJSON shape).
 
@@ -53,7 +53,7 @@ Verify: `aikit version`
 | `aikit list` | Show installed packages (optional: `--author`, `--detailed`) |
 | `aikit update <pkg>` | Update a package to latest (optional: `--breaking`) |
 | `aikit remove <pkg>` | Uninstall a package (optional: `--force`) |
-| `aikit agent run` | Run a coding agent with a prompt (`-a/--agent`, `-m/--model`, `-p/--prompt`, `--yolo`, `--stream`, `--events`) |
+| `aikit agent run` | Run a coding agent with a prompt. Common subagent-invocation knobs (spec 013): `-a/--agent`, `-m/--model`, `-p/--prompt`, `--sandbox`, `--auto-approve`, `-C/--cd`, `--add-dir`, `-o/--output-result`, `--output-schema`, `--capabilities`, `--bare`, `--ephemeral`, `--skip-git-repo-check`, `--yolo`, `--stream`, `--events` |
 | `aikit agent list` | List project-scoped agent definitions |
 | `aikit agent check` | Probe runnable agent CLIs only |
 | `aikit agent mcp list` / `add` | Inspect or merge MCP server entries (Cursor, Claude, Gemini, VS Code Copilot, OpenCode, Codex) |
@@ -126,7 +126,7 @@ GITHUB_TOKEN=your_github_token_here
 
 ## Run coding agents (`aikit agent run`)
 
-Runnable agents: `codex`, `claude`, `gemini`, `opencode`, `agent`,
+Runnable agents: `codex`, `claude`, `gemini`, `opencode`, `cursor`, `pi`,
 `aikit`, `auto`.
 
 ```bash
@@ -188,13 +188,23 @@ emitted by the built-in agent. Example:
 | `--agent` | `-a` | Runnable agent key | **Required** |
 | `--model` | `-m` | Model passed to the agent | Agent default |
 | `--prompt` | `-p` | Prompt | Reads from stdin if omitted |
-| `--yolo` | | Auto-confirm, skip checks | `false` |
+| `--sandbox` | | Filesystem-trust policy: `read-only` \| `bounded-write` \| `unrestricted` (spec 013 D1) | Backend default |
+| `--auto-approve` | | Auto-approve every tool call without prompting (D1) | `false` |
+| `--cd` | `-C` | Working root for the agent (D2); bounds `bounded-write` | Current dir |
+| `--add-dir` | | Extra writable root; repeatable (D2) | — |
+| `--output-result` | `-o` | Write the agent's final message to `<file>` (D3) | — |
+| `--output-schema` | | JSON Schema file the final output must satisfy (D4) | — |
+| `--capabilities` | | Print the resolved spec-013 capability matrix for `--agent` and exit (D5) | `false` |
+| `--bare` | | Skip user config/hooks/MCP for reproducible runs (D6) | `false` |
+| `--ephemeral` | | Do not persist the session (D6) | `false` |
+| `--skip-git-repo-check` | | Skip the headless git-repo guard (D6) | `false` |
+| `--yolo` | | Auto-confirm, skip checks. Macro for `--sandbox unrestricted --auto-approve` | `false` |
 | `--stream` | | Agent-native streaming flags | `false` |
 | `--events` | | NDJSON event stream to stdout | `false` |
 | `--progress` | | Live human-readable progress on stderr (conflicts with `--events`) | `false` |
 | `--resume` | `-r` | Resume the session with the given session ID | |
 | `--resume-last` | | Resume the most recent session for the current directory | `false` |
-| `--dry-run` | | Validate inputs but don't execute the agent | `false` |
+| `--dry-run` | | Validate inputs (and print the resolved matrix) but don't execute the agent | `false` |
 | `--debug` | | Verbose diagnostics (global `aikit` flag) | `false` |
 
 `--stream` and `--events` are independent: `--stream` tunes agent argv;
@@ -206,6 +216,71 @@ always pass `-a` (and `-m` only when you want to override the agent's
 model).
 
 Run `aikit agent run --help` for the authoritative option reference.
+
+### Trust, approval, and capability negotiation (spec 013)
+
+`--sandbox` is the filesystem **trust boundary** (ADR-0012) — graduated and
+vendor-neutral:
+
+- `read-only` — no writes.
+- `bounded-write` — writes confined to `-C/--cd` plus any `--add-dir`.
+- `unrestricted` — no boundary.
+
+It is separate from `--auto-approve` (whether each tool call prompts). codex
+couples approval into its sandbox; the other backends model the two axes
+independently.
+
+Each backend declares, per knob, how it can honor a request. Legend:
+**OS** = enforced via OS primitives; **App** = cooperative (app-level);
+**Emu** = emulated by aikit; **—** = unsupported.
+
+| Knob | codex | claude | gemini | opencode | cursor | pi | aikit |
+|---|---|---|---|---|---|---|---|
+| `--sandbox` | OS | App | OS | App | — | — | App |
+| `--auto-approve` | App | App | App | App | — | — | App |
+| `-C/--cd` | OS | OS | OS | OS | OS | OS | OS |
+| `--add-dir` | OS | — | OS | — | — | — | App |
+| `--output-schema` | OS | OS | Emu | Emu | Emu | Emu | Emu |
+| `--bare` | OS | OS | — | — | — | OS | — |
+| `--ephemeral` | OS | — | — | — | — | OS | — |
+
+**Fail-closed:** a security knob (`--sandbox`, `--add-dir`) a backend cannot
+honor is never silently downgraded — the run exits `3` before spawning.
+App-level fidelity is reported honestly, never relabeled OS-enforced; aikit
+does not synthesize its own OS sandbox where a backend lacks one.
+
+Pre-flight a backend with `--capabilities` (or `--dry-run`) before committing
+work:
+
+```bash
+aikit agent run -a cursor --capabilities
+aikit agent run -a pi --sandbox read-only --dry-run   # exits 3 — pi has no sandbox
+```
+
+### Exit codes (spec 013 D6)
+
+Uniform across backends:
+
+| Code | Meaning |
+|---|---|
+| `0` | success (terminal `Result` emitted) |
+| `2` | invalid invocation |
+| `3` | pre-flight failure (unsupported security knob / backend missing / auth) |
+| `10` | runtime sandbox violation |
+| `124` | timeout |
+| `130` / `137` / `143` | cancelled (SIGINT / SIGKILL / SIGTERM) |
+| `1` / other | backend failure (pass-through of the agent's own non-zero exit) |
+
+### Result capture (D3 / D4)
+
+- `-o/--output-result <file>` writes the agent's final assistant message to
+  `<file>` — derived from the terminal canonical event, so it works even for
+  backends whose native CLI has no such flag.
+- `--output-schema <file>` constrains the final output to a JSON Schema
+  (native on codex/claude; emulated elsewhere).
+- In `--events` mode a terminal `Result` event
+  (`{"type":"result","text":…,"structured":…,"session_id":…}`) is emitted
+  once, so streaming callers get the same handle without a temp file.
 
 ## Serve agents over HTTP (`aikit serve`)
 
@@ -248,9 +323,11 @@ within a turn.
 the richest stream: `session` first, `tool_use`/`tool_result` for every
 tool call, token-by-token `text` deltas, plus `reasoning`, `token_usage`,
 `step_finish`, and sub-agent/compression frames. External CLI agents
-(`claude`, `codex`, `gemini`, `agent`) emit only what their CLI surfaces —
+(`claude`, `codex`, `gemini`, `cursor`) emit only what their CLI surfaces —
 commonly a single final `text` frame and a `token_usage` frame, often
-without `tool_use`/`tool_result` (tool calls can run silently). A
+without `tool_use`/`tool_result` (tool calls can run silently); `pi` (driven
+over RPC) additionally emits structured `tool_use`/`tool_result` and
+`reasoning` frames. A
 `session_id` is returned when the backend exposes one: the built-in
 `aikit` agent always does, and CLI backends do when their output carries a
 session/turn id — but some CLIs (or versions) return `null`, so check the

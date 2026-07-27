@@ -301,7 +301,9 @@ aikit serve --host 0.0.0.0 --port 8787 \
 
 **Endpoints:** `GET /healthz` (liveness), `GET /readyz` (readiness),
 `GET /api/v1/agents`, `POST /api/v1/messages`, `GET /api/v1/sessions`,
-`GET /api/v1/sessions/{id}`, `DELETE /api/v1/sessions/{id}`. The health
+`GET /api/v1/sessions/{id}`, `DELETE /api/v1/sessions/{id}`, plus the
+bidirectional `POST /api/v1/live-sessions` (+ `GET`, `DELETE`, and
+`POST …/{id}/control`) for `claude`, `codex`, and `pi`. The health
 endpoints live at the root; `GET /api/` redirects `308` to `/api/v1`.
 `GET /api/v1/agents` reports each agent's `available` (binary on PATH) and
 `auth` (`ok` / `unauthenticated` / `unknown`) — `available` does **not**
@@ -335,6 +337,18 @@ response before relying on resume. The sync JSON body mirrors the stream:
 it always carries `content` and `exit_code`, plus an aggregated `usage`
 object when reported, `session_id` when known, and `error` (code
 `agent_error`, or `unauthenticated` for auth failures) on a non-zero exit.
+
+**Bidirectional live sessions** (`/api/v1/live-sessions`) are long-lived,
+multi-turn agent processes for `claude`, `codex`, and `pi`. Open one with
+`POST /api/v1/live-sessions` (the session streams as SSE) and drive it through
+`POST /api/v1/live-sessions/{id}/control`, whose `action` is one of
+`send_turn` (a follow-up `prompt`; pass `text`), `interrupt`, `set_model`
+(pass `model`), `get_context_usage`, or `disconnect`. `pi`'s control surface is
+complete: `set_model` takes `provider/id` (split into Pi's `provider` +
+`modelId`; Pi rejects a bare id), and `get_context_usage` returns Pi's
+`get_session_stats` payload — tokens, cost, and `contextUsage` (context-window
+fill). The same ops are available programmatically on `PiControlHandle` (plus
+pi-specific `steer` / `follow_up`).
 
 **Choosing a response shape on `/api/v1/messages`** — content
 negotiation via `Accept`:

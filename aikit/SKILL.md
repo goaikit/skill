@@ -10,7 +10,7 @@ license: Apache-2.0
 and publish `aikit.toml` packages from GitHub or a local directory, map
 templates into many assistant layouts, scaffold with `aikit init`, run
 supported agent CLIs with `aikit agent run`, and expose the same runtime
-over HTTP with `aikit serve`. The catalog covers **18** assistants;
+over HTTP with `aikit serve`. The catalog covers **19** assistants;
 `aikit agent run` supports `codex`, `claude`, `gemini`, `opencode`,
 `cursor`, `pi`, `aikit`. **aikit-sdk** (Rust) and **aikit-py** (Python) mirror
 the same gateway for automation (deploy, probe CLIs, buffered run, event
